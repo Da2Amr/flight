@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aircraft Tracker</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px 20px 100px;
+      background: #f9fafb;
+      color: #333;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 1000px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 70px;
+    }
+    .fixed-header {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 1000px;
+      background-color: rgba(249, 250, 251, 0.5);
+      backdrop-filter: saturate(180%) blur(8px);
+      -webkit-backdrop-filter: saturate(180%) blur(8px);
+      border-bottom: 1px solid rgba(200, 200, 200, 0.3);
+      z-index: 9999;
+      padding: 10px 0;
+      display: flex;
+      justify-content: center;
+      user-select: none;
+    }
+    .header-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 20px;
+      width: 100%;
+      max-width: 1000px;
+    }
+    .logo {
+      height: 40px;
+      filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.15));
+      margin: 0;
+      flex-shrink: 0;
+    }
+    h2 {
+      margin: 0;
+      font-weight: 600;
+      color: #222;
+      letter-spacing: 0.03em;
+      text-shadow: 0 0 5px rgba(255 255 255 / 0.7);
+      user-select: text;
+    }
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-start;
+      align-items: center;
+      padding-left: 20px;
+    }
+    label {
+      flex-basis: 100%;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #444;
+      text-align: left;
+    }
+    select,
+    input[type="number"],
+    button {
+      padding: 12px 15px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: 1.5px solid #bbb;
+      background-color: #fff;
+      transition: border-color 0.3s ease;
+      min-width: 150px;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+      cursor: pointer;
+    }
+    select:focus,
+    input[type="number"]:focus,
+    button:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 5px #2563eb;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      font-weight: 600;
+      user-select: none;
+      transition: background-color 0.3s ease;
+      flex-shrink: 0;
+    }
+    button:hover {
+      background-color: #1e40af;
+    }
+    #manual-input {
+      display: none;
+      width: 100%;
+      justify-content: flex-start;
+      gap: 10px;
+      align-items: center;
+      padding-left: 20px;
+    }
+    #map {
+      height: 500px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgb(0 0 0 / 0.1);
+      margin-bottom: 10px;
+      width: 100%;
+    }
+    .table-container {
+      max-height: 400px;
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background-color: #fff;
+      box-shadow: 0 3px 10px rgb(0 0 0 / 0.05);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px;
+      min-width: 600px;
+    }
+    thead {
+      background-color: #2563eb;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    th,
+    td {
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 1px solid #eee;
+    }
+    tbody tr:nth-child(even) {
+      background-color: #f4f6fb;
+    }
+    tbody tr:hover {
+      background-color: #e0ebff;
+    }
+    @media (max-width: 720px) {
+      body {
+        padding: 10px;
+      }
+      .container {
+        max-width: 100%;
+        margin-top: 70px;
+      }
+      .header-content {
+        justify-content: center;
+        gap: 8px;
+      }
+      .input-group {
+        flex-direction: column;
+        align-items: stretch;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      select,
+      input[type="number"],
+      button {
+        min-width: auto;
+        width: 100%;
+      }
+      #manual-input {
+        flex-direction: column;
+        gap: 12px;
+        padding-left: 0;
+      }
+      table {
+        font-size: 13px;
+        min-width: 100%;
+      }
+      #map {
+        height: 350px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="fixed-header" role="banner" aria-label="Header utama">
+    <div class="header-content">
+      <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo" />
+      <h2>Live Aircraft Tracker (Radius 300 km)</h2>
+    </div>
+    <div>
+      <a href="news.html" style="
+        color: #000;
+        text-decoration: none;
+        padding: 10px 15px;
+        font-weight: 600;
+        border-radius: 6px;
+        transition: background-color 0.3s ease;
+        display: inline-block;
+      " onmouseover="this.style.backgroundColor='#dbeafe'" onmouseout="this.style.backgroundColor='transparent'">
+        News
+      </a>
+    </div>
+  </header>
+  <main class="container" role="main">
+    <div class="input-group">
+      <label for="airport-select">Pilih Bandara / Manual Input:</label>
+      <select id="airport-select" aria-label="Pilih Bandara atau Manual Input">
+        <option value="letung">Letung</option>
+        <option value="jakarta">Jakarta (CGK)</option>
+        <option value="palembang">Palembang (PLM)</option>
+        <option value="pontianak">Pontianak (PNK)</option>
+        <option value="aceh">Aceh (BTJ)</option>
+        <option value="medan">Medan (KNO)</option>
+        <option value="padang">Padang (PDG)</option>
+        <option value="bali">Bali (DPS)</option>
+        <option value="balikpapan">Balikpapan (BPN)</option>
+        <option value="semarang">Semarang (SRG)</option>
+        <option value="yia">Yogyakarta (YIA)</option>
+        <option value="surabaya">Surabaya (SUB)</option>
+        <option value="manual">Manual Input</option>
+      </select>
+    </div>
+    <div id="manual-input" class="input-group">
+      <input type="number" id="manual-lat" placeholder="Latitude" step="0.0001" aria-label="Latitude manual" />
+      <input type="number" id="manual-lon" placeholder="Longitude" step="0.0001" aria-label="Longitude manual" />
+      <button id="btn-manual-load" aria-label="Tampilkan data berdasarkan koordinat manual">Tampilkan Data</button>
+    </div>
+    <div id="map" aria-label="Peta lokasi pesawat"></div>
+    <div class="table-container" tabindex="0" aria-label="Tabel data pesawat">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Callsign</th>
+            <th>Country</th>
+            <th>Lat</th>
+            <th>Lon</th>
+            <th>Altitude</th>
+            <th>Distance (km)</th>
+          </tr>
+        </thead>
+        <tbody id="data-body"></tbody>
+      </table>
+    </div>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([3.346028, 106.2666007], 7);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+    let layerGroup = L.layerGroup().addTo(map);
+    let circle = null;
+    const airportCoords = {
+      letung: [3.346028, 106.2666007],
+      jakarta: [-6.1256, 106.6558],
+      palembang: [-2.898, 104.699],
+      pontianak: [0.1507, 109.403],
+      aceh: [5.522, 95.4204],
+      medan: [3.5591, 98.6717],
+      padang: [-0.8761, 100.351],
+      bali: [-8.7482, 115.1675],
+      balikpapan: [-1.267, 116.893],
+      semarang: [-6.9728, 110.375],
+      yia: [-7.906, 110.061],
+      surabaya: [-7.3798, 112.7871],
+    };
+    function loadData(selectedAirport = "letung") {
+      let url = `/data?airport=${selectedAirport}`;
+      if (selectedAirport === "manual") {
+        const lat = parseFloat(document.getElementById("manual-lat").value);
+        const lon = parseFloat(document.getElementById("manual-lon").value);
+        if (isNaN(lat) || isNaN(lon)) {
+          alert("Masukkan koordinat yang valid.");
+          return;
+        }
+        url += `&lat=${lat}&lon=${lon}`;
+      }
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) return res.json().then((err) => { throw new Error(err.error || "Error"); });
+          return res.json();
+        })
+        .then((data) => {
+          layerGroup.clearLayers();
+          let center = airportCoords[selectedAirport] || [3.346028, 106.2666007];
+          if (selectedAirport === "manual") {
+            center = [
+              parseFloat(document.getElementById("manual-lat").value),
+              parseFloat(document.getElementById("manual-lon").value),
+            ];
+          }
+          map.setView(center, 7);
+          if (circle) map.removeLayer(circle);
+          circle = L.circle(center, {
+            radius: 300000,
+            color: "red",
+            fillOpacity: 0.1,
+          }).addTo(map);
+          const tbody = document.getElementById("data-body");
+          tbody.innerHTML = "";
+          data.forEach((row) => {
+            if (row.latitude && row.longitude) {
+              const marker = L.circleMarker([row.latitude, row.longitude], {
+                radius: 6,
+                color: "blue",
+              }).bindPopup(
+                `<b>${row.callsign}</b><br>${row.country}<br>Alt: ${row.altitude} m<br>Distance: ${row.distance_km} km<br>Time: ${row.timestamp}`
+              );
+              layerGroup.addLayer(marker);
+            }
+            tbody.innerHTML += `
+              <tr>
+                <td>${row.timestamp}</td>
+                <td>${row.callsign}</td>
+                <td>${row.country}</td>
+                <td>${row.latitude.toFixed(4)}</td>
+                <td>${row.longitude.toFixed(4)}</td>
+                <td>${row.altitude}</td>
+                <td>${row.distance_km}</td>
+              </tr>
+            `;
+          });
+        })
+        .catch((err) => alert("Gagal ambil data: " + err.message));
+    }
+    const airportSelect = document.getElementById("airport-select");
+    airportSelect.addEventListener("change", () => {
+      const selected = airportSelect.value;
+      document.getElementById("manual-input").style.display = selected === "manual" ? "flex" : "none";
+      loadData(selected);
+    });
+    document.getElementById("btn-manual-load").addEventListener("click", () => loadData("manual"));
+    loadData();
+  </script>
+</body>
+</html>
